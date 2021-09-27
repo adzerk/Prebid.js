@@ -52,16 +52,18 @@ const makeImp = (validBidRequest) => {
       }
     }
     const currType = mediaTypes[mediaType]
-    for (const [width, height] of (currType.sizes||[])) {
-      newImp[mediaType] = {
-        w: width,
-        height: height,
-        pos: 1, // TODO variable?
-        topframe: 1, // TODO variable?
-        battr: [] // TODO variable?
-      }
-      imps.push(newImp)
+
+    const formats = currType.sizes.map(([width, height]) => {
+      return {w: width, h: height}
+    })
+
+    newImp[mediaType] = {
+      format: formats,
+      pos: 1, // TODO variable?
+      topframe: 1, // TODO variable?
+      battr: [] // TODO variable?
     }
+    imps.push(newImp)
   }
 
   return imps
@@ -103,36 +105,36 @@ const makeSite = () => {
   }
 }
 
-const makeUser = (validBidRequest) => {
+const makeUser = (validBidRequest, bidderRequest) => {
   utils.logMessage({trace: 'makeUser', validBidRequest})
 
-  // foreach bidder in params
-    // lookup the user via the userId module
+  // TODO to set the user ids from the UserIds module we need to know the
+  // mapping from the Id module. So if the `pbjs.setConfig(...)` has been
+  // configured to use FooIdProvider we need to know the location of
+  // `validBidRequest.userIds.fooIdProviderKey.fooIdUserKey` to set as the
+  // buyeruid.
+  // TODO Using the `OpenRTB` EID system seems preferable overall.
+  const userIds = {}
 
-  const baseUser = {
-    // TODO what is this id?
-    id: 'U0nYzMAoJT0AAHH0ZdIAAABZ&9953',
+  // TODO this will probably come from userSyncs
+  const relayUserId = 'U0nYzMAoJT0AAHH0ZdIAAABZ&9953'
+
+  const newUser = {
+    id: relayUserId,
     ext: {
-      consent: 'example_consent_string',
+      consent: (bidderRequest.gdprConsent||{}).consentString || '',
       a0x: {
-        bidders: {
-          index: {
-            buyeruid: 'U0nYzMAoJT0AAHH0ZdIAAABZ&9953'
-          },
-          magnite: {
-            buyeruid: 'magnite-test-buyeruid'
-          }
-        }
+        bidders: userIds
       }
     }
   }
   // Add the (E)xtended User (Id)s. Current server implementation of OpenRT 2.5
   // does not look at this, but it could.
   if (validBidRequest.userIdAsEids) {
-    baseUser.ext.eids = validBidRequest.userIdAsEids
+    newUser.ext.eids = validBidRequest.userIdAsEids
   }
 
-  return baseUser
+  return newUser
 }
 
 const makeRegs = () => {
@@ -153,9 +155,8 @@ const makeBadv = () => {
   return []
 }
 
-const makeRelayRequest = (validBidRequest) => {
+const makeRelayRequest = (validBidRequest, bidderRequest) => {
   utils.logMessage({trace: 'makeRelayRequest', validBidRequest})
-
 
   let defaultRequest = {
     'id': validBidRequest.auctionId,
@@ -164,7 +165,7 @@ const makeRelayRequest = (validBidRequest) => {
     'badv': makeBadv(),
     'device': makeDevice(),
     'site': makeSite(),
-    'user': makeUser(validBidRequest),
+    'user': makeUser(validBidRequest, bidderRequest),
     'regs': makeRegs(),
     'at': 1,
     'ext': makeExt()
@@ -231,39 +232,37 @@ const isBidRequestValid = (bid) => {
 
 const buildRequests = (validBidRequests, bidderRequest) => {
   utils.logMessage({trace: 'buildRequests', validBidRequests, bidderRequest});
-
-  const requestObjects = [];
-  for (let validBidRequest of validBidRequests) {
-    utils.logMessage({trace: 'buildRequests::for'});
-    let reqData = makeRelayRequest(validBidRequest)
-    let requestObj = {
-      method: 'POST',
-      url: BIDDER_ENDPOINT,
-      data: reqData,
+  return validBidRequests.map(
+    (validBidRequest) => {
+      utils.logMessage({trace: 'buildRequests::map'});
+      let reqData = makeRelayRequest(validBidRequest, bidderRequest)
+      return {
+        method: 'POST',
+        url: BIDDER_ENDPOINT,
+        data: reqData,
+      }
     }
-    requestObjects.push(requestObj);
-  }
-
-  return requestObjects;
+  )
 };
 
 const interpretResponse = (serverResponse, request) => {
   utils.logMessage({trace: 'interpretResponse', serverResponse, request});
+
   const seatBids = ((serverResponse||{}).body||{}).seatbid || [];
   utils.logMessage({seatBids});
-  const bidResponses = [];
+
   if (!seatBids.length) {
-    return bidResponses;
+    return [];
   }
-  for (let seat of seatBids) {
-    for (let bid of seat.bid) {
-      utils.logMessage({trace: 'interpreResponse::for::for', bid});
+
+  return seatBids.flatMap((seat) => {
+    return seat.bid.map((bid) => {
+      utils.logMessage({trace: 'interpretResponse::seat.bid::map', bid});
       const bidResponse = newBidResponse(bid);
       utils.logMessage({bidResponse});
-      bidResponses.push(bidResponse);
-    }
-  }
-  return bidResponses;
+      return bidResponse
+    })
+  })
 };
 
 const getUserSyncs = (syncOptions, serverResponses, gdprConsent, uspConsent) => {
