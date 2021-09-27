@@ -10,7 +10,8 @@ const BIDDER_ENDPOINT = 'http://relay.prebid:8080/openrtb2'
 //////////////////////////////////////////////////////////// Request
 ////////////////////////////////////////////////////////////
 
-const makeSource = (transactionId) => {
+const makeSource = (validBidRequest) => {
+  const {transactionId} = validBidRequest
   return {
     'fd': 1,
     'tid': transactionId,
@@ -30,8 +31,9 @@ const makeSource = (transactionId) => {
   }
 }
 
-const makeImp = (bidId, bidParams) => {
-  utils.logMessage({trace: 'makeImp', bidId, bidParams})
+const makeImp = (validBidRequest) => {
+  const {bidId, params} = validBidRequest
+  utils.logMessage({trace: 'makeImp', bidId, params})
   return [{
     'id': bidId,
     'instl': 0,
@@ -46,7 +48,7 @@ const makeImp = (bidId, bidParams) => {
     'tagid': 'ad',
     'ext': {
       'a0x': {
-        'bidders': bidParams
+        'bidders': params
       }
     }
   }]
@@ -88,23 +90,36 @@ const makeSite = () => {
   }
 }
 
-const makeUser = () => {
-  return {
-    'id': 'U0nYzMAoJT0AAHH0ZdIAAABZ&9953',
-    'ext': {
-      'consent': 'example_consent_string',
-      'a0x': {
-        'bidders': {
-          'index': {
-            'buyeruid': 'U0nYzMAoJT0AAHH0ZdIAAABZ&9953'
+const makeUser = (validBidRequest) => {
+  utils.logMessage({trace: 'makeUser', validBidRequest})
+
+  // foreach bidder in params
+    // lookup the user via the userId module
+
+  const baseUser = {
+    // TODO what is this id?
+    id: 'U0nYzMAoJT0AAHH0ZdIAAABZ&9953',
+    ext: {
+      consent: 'example_consent_string',
+      a0x: {
+        bidders: {
+          index: {
+            buyeruid: 'U0nYzMAoJT0AAHH0ZdIAAABZ&9953'
           },
-          'magnite': {
-            'buyeruid': 'magnite-test-buyeruid'
+          magnite: {
+            buyeruid: 'magnite-test-buyeruid'
           }
         }
       }
     }
   }
+  // Add the (E)xtended User (Id)s. Current server implementation of OpenRT 2.5
+  // does not look at this, but it could.
+  if (validBidRequest.userIdAsEids) {
+    baseUser.ext.eids = validBidRequest.userIdAsEids
+  }
+
+  return baseUser
 }
 
 const makeRegs = () => {
@@ -125,16 +140,16 @@ const makeBadv = () => {
   return []
 }
 
-const makeRelayRequest = (transactionId, requestId, bidId, bidParams) => {
-  utils.logMessage({trace: 'makeRelayRequest', bidId, bidParams})
+const makeRelayRequest = (validBidRequest) => {
+  utils.logMessage({trace: 'makeRelayRequest', validBidRequest})
   const defaultReqeust = {
-    'id': requestId,
-    'source': makeSource(transactionId),
-    'imp': makeImp(bidId, bidParams),
+    'id': validBidRequest.auctionId,
+    'source': makeSource(validBidRequest),
+    'imp': makeImp(validBidRequest),
     'badv': makeBadv(),
     'device': makeDevice(),
     'site': makeSite(),
-    'user': makeUser(),
+    'user': makeUser(validBidRequest),
     'regs': makeRegs(),
     'at': 1,
     'test': 1,
@@ -201,9 +216,8 @@ const buildRequests = (validBidRequests, bidderRequest) => {
 
   const requestObjects = [];
   for (let validBidRequest of validBidRequests) {
-    let {auctionId, transactionId, bidId, params} = validBidRequest;
-    utils.logMessage({trace: 'buildRequests::for', bidId, params});
-    let reqData = makeRelayRequest(transactionId, auctionId, bidId, params)
+    utils.logMessage({trace: 'buildRequests::for'});
+    let reqData = makeRelayRequest(validBidRequest)
     let requestObj = {
       method: 'POST',
       url: BIDDER_ENDPOINT,
