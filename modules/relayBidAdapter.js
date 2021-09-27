@@ -32,26 +32,39 @@ const makeSource = (validBidRequest) => {
 }
 
 const makeImp = (validBidRequest) => {
-  const {bidId, params} = validBidRequest
+  const {bidId, params, mediaTypes} = validBidRequest
   utils.logMessage({trace: 'makeImp', bidId, params})
-  return [{
-    'id': bidId,
-    'instl': 0,
-    'banner': {
-      'w': 980,
-      'h': 300,
-      'pos': 1,
-      'topframe': 1,
-      'battr': []
-    },
-    'bidfloor': 26.52,
-    'tagid': 'ad',
-    'ext': {
-      'a0x': {
-        'bidders': params
+
+  const imps = []
+  for (const mediaType in mediaTypes) {
+    const newImp = {
+      id: bidId,
+      // TODO what is this?
+      instl: 0,
+      // TODO where to get this?
+      bidfloor: 1,
+      // TODO is variable?
+      tagid: 'ad',
+      ext: {
+        a0x: {
+          bidders: params
+        }
       }
     }
-  }]
+    const currType = mediaTypes[mediaType]
+    for (const [width, height] of (currType.sizes||[])) {
+      newImp[mediaType] = {
+        w: width,
+        height: height,
+        pos: 1, // TODO variable?
+        topframe: 1, // TODO variable?
+        battr: [] // TODO variable?
+      }
+      imps.push(newImp)
+    }
+  }
+
+  return imps
 }
 
 const makeDevice = () => {
@@ -142,7 +155,9 @@ const makeBadv = () => {
 
 const makeRelayRequest = (validBidRequest) => {
   utils.logMessage({trace: 'makeRelayRequest', validBidRequest})
-  const defaultReqeust = {
+
+
+  let defaultRequest = {
     'id': validBidRequest.auctionId,
     'source': makeSource(validBidRequest),
     'imp': makeImp(validBidRequest),
@@ -152,10 +167,13 @@ const makeRelayRequest = (validBidRequest) => {
     'user': makeUser(validBidRequest),
     'regs': makeRegs(),
     'at': 1,
-    'test': 1,
     'ext': makeExt()
   }
-  return defaultReqeust;
+
+  // TODO `params.globalExtFn :: Request -> Request` instead of Object.assign 
+  // for deep manipulation?
+  defaultRequest = Object.assign(defaultRequest, (validBidRequest.globalExt||{}))
+  return defaultRequest;
 };
 
 
