@@ -12,11 +12,6 @@ const BIDDER_ENDPOINT = 'http://relay.prebid:8080/openrtb2'
 
 const makeSource = (validBidRequest) => {
   const {transactionId, schain} = validBidRequest
-  /* {
-        'asi': 'inskinmedia.com',
-        'sid': '971672',
-        'hp': 1
-      } */
   return {
     fd: 1,
     tid: transactionId,
@@ -31,19 +26,16 @@ const makeSource = (validBidRequest) => {
 }
 
 const makeImp = (validBidRequest) => {
-  const {bidId, params, mediaTypes} = validBidRequest
+  const {bidId, params, mediaTypes, adUnitCode} = validBidRequest
   utils.logMessage({trace: 'makeImp', bidId, params})
 
   const imps = []
   for (const mediaType in mediaTypes) {
     const newImp = {
       id: bidId,
-      // TODO what is this?
-      instl: 0,
       // TODO where to get this?
       bidfloor: 1,
-      // TODO is variable?
-      tagid: 'ad',
+      tagid: adUnitCode,
       ext: {
         a0x: {
           bidders: params
@@ -68,25 +60,52 @@ const makeImp = (validBidRequest) => {
   return imps
 }
 
+const deviceHeuristic = (navigatorPlatformStr) => {
+  const deviceTypes = {mobile: 1, pc: 2, phone: 4}
+  const match = (str, needle) => {
+    return str.indexOf(needle) > -1
+  }
+
+  const plat = navigatorPlatformStr.toLowerCase()
+  const isPC = (
+    match(plat, 'win') ||
+    match(plat, 'mac') ||
+    match(plat, 'x11') ||
+    match(plat, 'linux')
+  )
+  const isPhone = (
+    match(plat, 'iphone') ||
+    match(plat, 'android') 
+  )
+
+  const type = isPhone && 'phone' ||
+               isPC && 'pc' ||
+               'mobile'
+
+  return deviceTypes[type]
+}
+
 const makeDevice = () => {
-  // TODO Prebid does not appear to provide any sort of Device information.
-  return {} /*
-    language: 'EN',
-    devicetype: 2,
+  const safeNavigator = (window||{}).navigator || {}
+  const platform      = safeNavigator.platform || ''
+  const userAgentStr  = safeNavigator.userAgent || ''
+  const deviceType    = deviceHeuristic(platform)
+  const langauge      = (safeNavigator.languages[1]||'').toUpperCase()
+  const jsEnabled     = 1
+  return {
+    ua: userAgentStr,
+    language: langauge,
+    devicetype: deviceType,
+    js: jsEnabled,
+    /*
     geo: {
-      country: 'AU',
-      lat: -27.6265,
-      lon: 153.3003,
+      country: ?, //ex: US
+      lat: ?,
+      lon: ?,
       type: 2
-    },
-    ip: '101.179.3.237',
-    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36',
-    js: 0,
-    make: 'Google',
-    model: 'Chrome',
-    os: 'Desktop',
-    osv: ''
-  }*/
+    }
+    */
+  }
 }
 
 const makeSite = () => {
@@ -100,7 +119,6 @@ const makeSite = () => {
     },
     page: pubPage,
     domain: pubDomain,
-    // domain: 'www.9news.com.au',
     ref: '',
     cat: [
       ''
@@ -142,15 +160,15 @@ const makeUser = (validBidRequest, bidderRequest) => {
 
 const makeRegs = () => {
   return {
-    'ext': {
-      'gdpr': 0
+    ext: {
+      gdpr: 0
     }
   }
 }
 
 const makeExt = () => {
   return {
-    'ssl': 1
+    ssl: 1
   }
 }
 
