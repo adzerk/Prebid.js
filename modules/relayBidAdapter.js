@@ -11,21 +11,20 @@ const BIDDER_ENDPOINT = 'http://relay.prebid:8080/openrtb2'
 ////////////////////////////////////////////////////////////
 
 const makeSource = (validBidRequest) => {
-  const {transactionId} = validBidRequest
+  const {transactionId, schain} = validBidRequest
+  /* {
+        'asi': 'inskinmedia.com',
+        'sid': '971672',
+        'hp': 1
+      } */
   return {
-    'fd': 1,
-    'tid': transactionId,
-    'ext': {
-      'schain': {
-        'ver': '1.0',
-        'complete': 1,
-        'nodes': [
-          {
-            'asi': 'inskinmedia.com',
-            'sid': '971672',
-            'hp': 1
-          }
-        ]
+    fd: 1,
+    tid: transactionId,
+    ext: {
+      schain: {
+        ver: '1.0',
+        complete: 1,
+        nodes: schain 
       }
     }
   }
@@ -71,35 +70,35 @@ const makeImp = (validBidRequest) => {
 
 const makeDevice = () => {
   return {
-    'language': 'EN',
-    'devicetype': 2,
-    'geo': {
-      'country': 'AU',
-      'lat': -27.6265,
-      'lon': 153.3003,
-      'type': 2
+    language: 'EN',
+    devicetype: 2,
+    geo: {
+      country: 'AU',
+      lat: -27.6265,
+      lon: 153.3003,
+      type: 2
     },
-    'ip': '101.179.3.237',
-    'ua': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36',
-    'js': 0,
-    'make': 'Google',
-    'model': 'Chrome',
-    'os': 'Desktop',
-    'osv': ''
+    ip: '101.179.3.237',
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36',
+    js: 0,
+    make: 'Google',
+    model: 'Chrome',
+    os: 'Desktop',
+    osv: ''
   }
 }
 
 const makeSite = () => {
   return {
-    'id': '0',
-    'name': 'ISM_9 News - (Creative Approval) - Desktop - ( AU NZ ) (128045)',
-    'publisher': {
-      'id': ''
+    id: '0',
+    name: 'ISM_9 News - (Creative Approval) - Desktop - ( AU NZ ) (128045)',
+    publisher: {
+      id: ''
     },
-    'page': 'https://www.9news.com.au/',
-    'domain': 'www.9news.com.au',
-    'ref': '',
-    'cat': [
+    page: 'https://www.9news.com.au/',
+    domain: 'www.9news.com.au',
+    ref: '',
+    cat: [
       ''
     ]
   }
@@ -116,7 +115,7 @@ const makeUser = (validBidRequest, bidderRequest) => {
   // TODO Using the `OpenRTB` EID system seems preferable overall.
   const userIds = {}
 
-  // TODO this will probably come from userSyncs
+  // TODO this will probably come from userSyncs?
   const relayUserId = 'U0nYzMAoJT0AAHH0ZdIAAABZ&9953'
 
   const newUser = {

@@ -257,7 +257,7 @@ function bundle(dev, moduleArr) {
 // If --notest is given, it will immediately skip the test task (useful for developing changes with `gulp serve --notest`)
 
 function test(done) {
-  done(); // disable the karma shit
+  done(); // disable karma tests
   if (argv.notest) {
     done();
   } else if (argv.e2e) {
