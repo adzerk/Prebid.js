@@ -18,18 +18,46 @@
         var adUnits = [{
             code: 'div-gpt-ad-1460505748561-0',
             mediaTypes: {
-                banner: {
-                    sizes: [[300, 250], [300,600]],
-                }
+              banner: {
+                sizes: [[300, 250], [300,600]],
+              }
             },
             // Replace this object to test a new Adapter!
             bids: [{
-                bidder: 'appnexus',
-                params: {
-                    placementId: 13144370
+              bidder: 'relay',
+              params: {
+                index: {
+                  siteId: "1234567",
+                  pmp: {
+                    private_auction: 1,
+                    deals: [ { id: "ENDEAVOURAU21", bidfloor: 26.52 } ]
+                  }
+                },
+                magnite: {
+                  siteId: "123",
+                  zoneId: "456",
+                  accountId: "789"
                 }
+              },
+              // globalExt is merged over any final makeRelayRequest.
+              globalExt: { 
+                  test: 1 ,
+                  user: {
+                      ext: {
+                        a0x: {
+                          bidders: {
+                            index: {
+                              buyeruid: 'U0nYzMAoJT0AAHH0ZdIAAABZ&9953'
+                            },
+                            magnite: {
+                              buyeruid: 'magnite-test-buyeruid'
+                            }
+                          }
+                        }
+                      }
+                    }
+              },
             }]
-
         }];
 
         var pbjs = pbjs || {};

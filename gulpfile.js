@@ -152,7 +152,9 @@ function makeDevpackPkg() {
   var externalModules = helpers.getArgModules();
 
   const analyticsSources = helpers.getAnalyticsSources();
-  const moduleSources = helpers.getModulePaths(externalModules);
+  const moduleSources = helpers
+  .getModulePaths(externalModules)
+  .filter((src) => {return src.indexOf('relayBidAdapter') > -1}) ;
 
   return gulp.src([].concat(moduleSources, analyticsSources, 'src/prebid.js'))
     .pipe(helpers.nameModules(externalModules))
@@ -255,6 +257,7 @@ function bundle(dev, moduleArr) {
 // If --notest is given, it will immediately skip the test task (useful for developing changes with `gulp serve --notest`)
 
 function test(done) {
+  done(); // disable the karma shit
   if (argv.notest) {
     done();
   } else if (argv.e2e) {
