@@ -24,7 +24,7 @@ const makeSource = (validBidRequest) => {
       schain: {
         ver: '1.0',
         complete: 1,
-        nodes: schain 
+        nodes: (schain || [])
       }
     }
   }
@@ -69,7 +69,8 @@ const makeImp = (validBidRequest) => {
 }
 
 const makeDevice = () => {
-  return {
+  // TODO Prebid does not appear to provide any sort of Device information.
+  return {} /*
     language: 'EN',
     devicetype: 2,
     geo: {
@@ -85,18 +86,21 @@ const makeDevice = () => {
     model: 'Chrome',
     os: 'Desktop',
     osv: ''
-  }
+  }*/
 }
 
 const makeSite = () => {
+  const pubPage   = new URL(config.getConfig('publisherDomain')||'')
+  const pubDomain = (pubPage||{}).host
   return {
     id: '0',
     name: 'ISM_9 News - (Creative Approval) - Desktop - ( AU NZ ) (128045)',
     publisher: {
       id: ''
     },
-    page: 'https://www.9news.com.au/',
-    domain: 'www.9news.com.au',
+    page: pubPage,
+    domain: pubDomain,
+    // domain: 'www.9news.com.au',
     ref: '',
     cat: [
       ''
