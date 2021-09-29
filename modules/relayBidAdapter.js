@@ -1,15 +1,18 @@
 import * as utils from '../src/utils.js';
 import { config } from '../src/config.js';
-import { registerBidder, getIabSubCategory } from '../src/adapters/bidderFactory.js';
-import { BANNER, NATIVE, VIDEO, ADPOD } from '../src/mediaTypes.js';
-import { util } from 'chai';
+import { registerBidder } from '../src/adapters/bidderFactory.js';
 
-const BIDDER_ENDPOINT = 'http://relay.prebid:8080/openrtb2'
+const BIDDER_ENDPOINT = '//relay.prebid:8080/openrtb2'
 
 ////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////// Request
 ////////////////////////////////////////////////////////////
 
+/**
+ * 
+ * @param {*} validBidRequest 
+ * @returns 
+ */
 const makeSource = (validBidRequest) => {
   const {transactionId, schain} = validBidRequest
   return {
@@ -25,6 +28,11 @@ const makeSource = (validBidRequest) => {
   }
 }
 
+/**
+ * 
+ * @param {*} validBidRequest 
+ * @returns 
+ */
 const makeImp = (validBidRequest) => {
   const {bidId, params, mediaTypes, adUnitCode} = validBidRequest
   utils.logMessage({trace: 'makeImp', bidId, params})
@@ -50,9 +58,11 @@ const makeImp = (validBidRequest) => {
 
     newImp[mediaType] = {
       format: formats,
+      /*
       pos: 1, // TODO variable?
       topframe: 1, // TODO variable?
       battr: [] // TODO variable?
+      */
     }
     imps.push(newImp)
   }
@@ -60,6 +70,11 @@ const makeImp = (validBidRequest) => {
   return imps
 }
 
+/**
+ * 
+ * @param {*} navigatorPlatformStr 
+ * @returns 
+ */
 const deviceHeuristic = (navigatorPlatformStr) => {
   const deviceTypes = {mobile: 1, pc: 2, phone: 4}
   const match = (str, needle) => {
@@ -85,6 +100,10 @@ const deviceHeuristic = (navigatorPlatformStr) => {
   return deviceTypes[type]
 }
 
+/**
+ * 
+ * @returns 
+ */
 const makeDevice = () => {
   const safeNavigator = (window||{}).navigator || {}
   const platform      = safeNavigator.platform || ''
@@ -108,24 +127,35 @@ const makeDevice = () => {
   }
 }
 
+/**
+ * 
+ * @returns 
+ */
 const makeSite = () => {
   const pubPage   = new URL(config.getConfig('publisherDomain')||'')
   const pubDomain = (pubPage||{}).host
   return {
+    // TODO id could come from one of the params, but which one?
     id: '0',
-    name: 'ISM_9 News - (Creative Approval) - Desktop - ( AU NZ ) (128045)',
-    publisher: {
-      id: ''
-    },
     page: pubPage,
     domain: pubDomain,
-    ref: '',
-    cat: [
-      ''
-    ]
+    // name: '',
+    // ref: '',
+    // cat: [
+    //   ''
+    // ],
+    // publisher: {
+    //   id: ''
+    // },
   }
 }
 
+/**
+ * 
+ * @param {*} validBidRequest 
+ * @param {*} bidderRequest 
+ * @returns 
+ */
 const makeUser = (validBidRequest, bidderRequest) => {
   utils.logMessage({trace: 'makeUser', validBidRequest})
 
@@ -138,7 +168,7 @@ const makeUser = (validBidRequest, bidderRequest) => {
   const userIds = {}
 
   // TODO this will probably come from userSyncs?
-  const relayUserId = 'U0nYzMAoJT0AAHH0ZdIAAABZ&9953'
+  const relayUserId = '?'
 
   const newUser = {
     id: relayUserId,
@@ -158,24 +188,48 @@ const makeUser = (validBidRequest, bidderRequest) => {
   return newUser
 }
 
-const makeRegs = () => {
-  return {
+/**
+ * 
+ * @param {*} bidderRequest 
+ * @returns 
+ */
+const makeRegs = (bidderRequest) => {
+  const coppaApplies = config.getConfig('coppa') || false
+  const gdprApplies = (bidderRequest.gdprConsent||{}).gdprApplies || false
+  const regs = {
+    coppa: coppaApplies ? 1 : 0,
     ext: {
-      gdpr: 0
+      gdpr: gdprApplies ? 1 : 0
     }
   }
+
+  return regs
 }
 
+/**
+ * 
+ * @returns 
+ */
 const makeExt = () => {
   return {
     ssl: 1
   }
 }
 
+/**
+ * 
+ * @returns 
+ */
 const makeBadv = () => {
   return []
 }
 
+/**
+ * 
+ * @param {*} validBidRequest 
+ * @param {*} bidderRequest 
+ * @returns 
+ */
 const makeRelayRequest = (validBidRequest, bidderRequest) => {
   utils.logMessage({trace: 'makeRelayRequest', validBidRequest})
 
@@ -187,7 +241,7 @@ const makeRelayRequest = (validBidRequest, bidderRequest) => {
     'device': makeDevice(),
     'site': makeSite(),
     'user': makeUser(validBidRequest, bidderRequest),
-    'regs': makeRegs(),
+    'regs': makeRegs(bidderRequest),
     'at': 1,
     'ext': makeExt()
   }
@@ -203,9 +257,22 @@ const makeRelayRequest = (validBidRequest, bidderRequest) => {
 //////////////////////////////////////////////////////////// Response
 ////////////////////////////////////////////////////////////
 
+/**
+ * 
+ * @param {*} obj 
+ * @param {*} key 
+ * @param {*} defaultValue 
+ * @returns 
+ */
 const withDefault = (obj, key, defaultValue) => {
   return (obj || {})[key] || defaultValue;
 }
+
+/**
+ * 
+ * @param {*} bid 
+ * @returns 
+ */
 const newBidResponse = (bid) => {
   utils.logMessage({trace: 'newBidResponse', bid})
   return {
@@ -241,16 +308,32 @@ const newBidResponse = (bid) => {
     // }
   };
 }
+
 ////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////// Spec Interface
 ////////////////////////////////////////////////////////////
 
-
+/**
+ * 
+ * @param {*} bid 
+ * @returns 
+ */
 const isBidRequestValid = (bid) => {
   utils.logMessage({trace: 'isBidRequestValid', bid});
-  return true;
+  try {
+    return bid.params && bid.sizes.length > 0
+  } catch(e) {
+    utils.logMessage({trace: 'isBidRequestValid::exception', exception: e});
+    return false
+  }
 };
 
+/**
+ * 
+ * @param {*} validBidRequests 
+ * @param {*} bidderRequest 
+ * @returns 
+ */
 const buildRequests = (validBidRequests, bidderRequest) => {
   utils.logMessage({trace: 'buildRequests', validBidRequests, bidderRequest});
   return validBidRequests.map(
@@ -266,6 +349,12 @@ const buildRequests = (validBidRequests, bidderRequest) => {
   )
 };
 
+/**
+ * 
+ * @param {*} serverResponse 
+ * @param {*} request 
+ * @returns 
+ */
 const interpretResponse = (serverResponse, request) => {
   utils.logMessage({trace: 'interpretResponse', serverResponse, request});
 
@@ -286,22 +375,68 @@ const interpretResponse = (serverResponse, request) => {
   })
 };
 
+/**
+ * 
+ * @param {*} syncOptions 
+ * @param {*} serverResponses 
+ * @param {*} gdprConsent 
+ * @param {*} uspConsent 
+ * @returns 
+ */
 const getUserSyncs = (syncOptions, serverResponses, gdprConsent, uspConsent) => {
   utils.logMessage({trace: 'getUserSyncs'});
-};
+    const syncs = []
 
+    var gdpr_params;
+    if (typeof gdprConsent.gdprApplies === 'boolean') {
+      gdpr_params = `gdpr=${Number(gdprConsent.gdprApplies)}&gdpr_consent=${gdprConsent.consentString}`;
+    } else {
+      gdpr_params = `gdpr_consent=${gdprConsent.consentString}`;
+    }
+
+    if (syncOptions.iframeEnabled) {
+      syncs.push({
+        type: 'iframe',
+        url: '//fooo?' + gdpr_params
+      });
+    }
+    if (syncOptions.pixelEnabled && serverResponses.length > 0) {
+      syncs.push({
+        type: 'image',
+        url: serverResponses[0].body.userSync.url + gdpr_params
+      });
+    }
+    // return syncs;
+    return [];
+}
+
+/**
+ * 
+ * @param {*} timeoutData 
+ */
 const onTimeout = (timeoutData) => {
   utils.logMessage({trace: 'onTimeout', timeoutData});
 };
 
+/**
+ * 
+ * @param {*} bid 
+ */
 const onBidWon = (bid) => {
   utils.logMessage({trace: 'onBidWon'});
 };
 
+/**
+ * 
+ * @param {*} bid 
+ */
 const onSetTargeting = (bid) => {
   utils.logMessage({trace: 'onSetTargeting'});
 };
 
+//////////////////////////////////////////////////////////// 
+//////////////////////////////////////////////////////////// Spec
+//////////////////////////////////////////////////////////// 
 
 const BIDDER_CODE = 'relay';
 export const spec = {
