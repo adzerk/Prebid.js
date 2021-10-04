@@ -2,7 +2,8 @@ import * as utils from '../src/utils.js';
 import { config } from '../src/config.js';
 import { registerBidder } from '../src/adapters/bidderFactory.js';
 
-const BIDDER_ENDPOINT = '//relay.prebid:8080/openrtb2'
+const BIDDER_ENDPOINT = '//localhost:8080/openrtb2'
+const SYNC_ENDPOINT = '//localhost:8080/u/set'
 
 ////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////// Request
@@ -41,8 +42,6 @@ const makeImp = (validBidRequest) => {
   for (const mediaType in mediaTypes) {
     const newImp = {
       id: bidId,
-      // TODO where to get this?
-      bidfloor: 1,
       tagid: adUnitCode,
       ext: {
         a0x: {
@@ -58,11 +57,6 @@ const makeImp = (validBidRequest) => {
 
     newImp[mediaType] = {
       format: formats,
-      /*
-      pos: 1, // TODO variable?
-      topframe: 1, // TODO variable?
-      battr: [] // TODO variable?
-      */
     }
     imps.push(newImp)
   }
@@ -116,14 +110,6 @@ const makeDevice = () => {
     language: langauge,
     devicetype: deviceType,
     js: jsEnabled,
-    /*
-    geo: {
-      country: ?, //ex: US
-      lat: ?,
-      lon: ?,
-      type: 2
-    }
-    */
   }
 }
 
@@ -135,18 +121,9 @@ const makeSite = () => {
   const pubPage   = new URL(config.getConfig('publisherDomain')||'')
   const pubDomain = (pubPage||{}).host
   return {
-    // TODO id could come from one of the params, but which one?
     id: '0',
     page: pubPage,
     domain: pubDomain,
-    // name: '',
-    // ref: '',
-    // cat: [
-    //   ''
-    // ],
-    // publisher: {
-    //   id: ''
-    // },
   }
 }
 
@@ -159,24 +136,9 @@ const makeSite = () => {
 const makeUser = (validBidRequest, bidderRequest) => {
   utils.logMessage({trace: 'makeUser', validBidRequest})
 
-  // TODO to set the user ids from the UserIds module we need to know the
-  // mapping from the Id module. So if the `pbjs.setConfig(...)` has been
-  // configured to use FooIdProvider we need to know the location of
-  // `validBidRequest.userIds.fooIdProviderKey.fooIdUserKey` to set as the
-  // buyeruid.
-  // TODO Using the `OpenRTB` EID system seems preferable overall.
-  const userIds = {}
-
-  // TODO this will probably come from userSyncs?
-  const relayUserId = '?'
-
   const newUser = {
-    id: relayUserId,
     ext: {
-      consent: (bidderRequest.gdprConsent||{}).consentString || '',
-      a0x: {
-        bidders: userIds
-      }
+      consent: (bidderRequest.gdprConsent||{}).consentString || ''
     }
   }
   // Add the (E)xtended User (Id)s. Current server implementation of OpenRT 2.5
@@ -234,21 +196,22 @@ const makeRelayRequest = (validBidRequest, bidderRequest) => {
   utils.logMessage({trace: 'makeRelayRequest', validBidRequest})
 
   let defaultRequest = {
-    'id': validBidRequest.auctionId,
-    'source': makeSource(validBidRequest),
-    'imp': makeImp(validBidRequest),
-    'badv': makeBadv(),
-    'device': makeDevice(),
-    'site': makeSite(),
-    'user': makeUser(validBidRequest, bidderRequest),
-    'regs': makeRegs(bidderRequest),
-    'at': 1,
-    'ext': makeExt()
+    id:     validBidRequest.auctionId,
+    source: makeSource(validBidRequest),
+    imp:    makeImp(validBidRequest),
+    badv:   makeBadv(),
+    device: makeDevice(),
+    site:   makeSite(),
+    user:   makeUser(validBidRequest, bidderRequest),
+    regs:   makeRegs(bidderRequest),
+    at:     1,
+    ext:    makeExt()
   }
 
-  // TODO `params.globalExtFn :: Request -> Request` instead of Object.assign 
-  // for deep manipulation?
-  defaultRequest = Object.assign(defaultRequest, (validBidRequest.globalExt||{}))
+  // Apply global and ad unit ortb2 configuration/context overwrites.
+  const globalOrtb = config.getConfig("ortb2") || {}
+  const adUnitOrtb = validBidRequest.ortb2Imp || {}
+  defaultRequest = Object.assign(defaultRequest, globalOrtb, adUnitOrtb)
   return defaultRequest;
 };
 
@@ -384,30 +347,10 @@ const interpretResponse = (serverResponse, request) => {
  * @returns 
  */
 const getUserSyncs = (syncOptions, serverResponses, gdprConsent, uspConsent) => {
-  utils.logMessage({trace: 'getUserSyncs'});
-    const syncs = []
+  utils.logMessage({trace: 'getUserSyncs', status: "Not implemented.", serverResponses, gdprConsent, uspConsent});
 
-    var gdpr_params;
-    if (typeof gdprConsent.gdprApplies === 'boolean') {
-      gdpr_params = `gdpr=${Number(gdprConsent.gdprApplies)}&gdpr_consent=${gdprConsent.consentString}`;
-    } else {
-      gdpr_params = `gdpr_consent=${gdprConsent.consentString}`;
-    }
+  return [];
 
-    if (syncOptions.iframeEnabled) {
-      syncs.push({
-        type: 'iframe',
-        url: '//fooo?' + gdpr_params
-      });
-    }
-    if (syncOptions.pixelEnabled && serverResponses.length > 0) {
-      syncs.push({
-        type: 'image',
-        url: serverResponses[0].body.userSync.url + gdpr_params
-      });
-    }
-    // return syncs;
-    return [];
 }
 
 /**
@@ -415,7 +358,7 @@ const getUserSyncs = (syncOptions, serverResponses, gdprConsent, uspConsent) => 
  * @param {*} timeoutData 
  */
 const onTimeout = (timeoutData) => {
-  utils.logMessage({trace: 'onTimeout', timeoutData});
+  utils.logMessage({trace: 'onTimeout', status: "Not implemented.", timeoutData});
 };
 
 /**
@@ -423,7 +366,7 @@ const onTimeout = (timeoutData) => {
  * @param {*} bid 
  */
 const onBidWon = (bid) => {
-  utils.logMessage({trace: 'onBidWon'});
+  utils.logMessage({trace: 'onBidWon', status: "Not implemented."});
 };
 
 /**
@@ -431,7 +374,7 @@ const onBidWon = (bid) => {
  * @param {*} bid 
  */
 const onSetTargeting = (bid) => {
-  utils.logMessage({trace: 'onSetTargeting'});
+  utils.logMessage({trace: 'onSetTargeting', status: "Not implemented."});
 };
 
 //////////////////////////////////////////////////////////// 
@@ -441,7 +384,6 @@ const onSetTargeting = (bid) => {
 const BIDDER_CODE = 'relay';
 export const spec = {
   code: BIDDER_CODE,
-  aliases: ['relay'], // short code
   isBidRequestValid: isBidRequestValid,
   buildRequests: buildRequests,
   interpretResponse: interpretResponse,

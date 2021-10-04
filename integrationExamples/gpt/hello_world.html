@@ -9,23 +9,30 @@
 
 <html>
 <head>
+    <!-- Change the following URL to point to your local prebid -->
     <script async src="../../build/dev/prebid.js"></script>
     <script async src="https://www.googletagservices.com/tag/js/gpt.js"></script>
     <script>
-        var FAILSAFE_TIMEOUT = 3300;
-        var PREBID_TIMEOUT = 1000;
+        var FAILSAFE_TIMEOUT = 10000;
+        var PREBID_TIMEOUT = 10000;
 
         var adUnits = [{
             code: 'div-gpt-ad-1460505748561-0',
             mediaTypes: {
               banner: {
-                sizes: [[300, 250], [300,600]],
+                // All ad sizes for all `bidder.params` entries are placed here.
+                sizes: [[300, 250], [300, 600]],
               }
             },
-            // Replace this object to test a new Adapter!
             bids: [{
               bidder: 'relay',
               params: {
+                appnexus: {
+                  placementId: 550550
+                },
+                criteo: {
+                  zoneId: 876543
+                },
                 index: {
                   siteId: "1234567",
                   pmp: {
@@ -33,29 +40,27 @@
                     deals: [ { id: "ENDEAVOURAU21", bidfloor: 26.52 } ]
                   }
                 },
-                magnite: {
-                  siteId: "123",
-                  zoneId: "456",
-                  accountId: "789"
+                openx: {
+                  unit: "some-unit",
+                  delDomain: "some-domain"
+                },
+                pubmatic: {
+                  publisherId: 99999,
+                  adSlot: "pubmatic-adslot"
+                },
+                rubicon: {
+                  accountId: 123123,
+                  siteId: 333444
+                },
+                triplelift: {
+                  inventoryCode: "triplelife-inventory-code"
                 }
               },
-              // globalExt is merged over any final makeRelayRequest.
-              globalExt: { 
-                  test: 1 ,
-                  user: {
-                      ext: {
-                        a0x: {
-                          bidders: {
-                            index: {
-                              buyeruid: 'U0nYzMAoJT0AAHH0ZdIAAABZ&9953'
-                            },
-                            magnite: {
-                              buyeruid: 'magnite-test-buyeruid'
-                            }
-                          }
-                        }
-                      }
-                    }
+              // The `ortb2Imp` key takes a value of OpenRTB request JSON. This
+              // value will be applied AFTER prebid.js config `ortb2` and only
+              // for this ad unit.
+              ortb2Imp: { 
+                  test: 1
               },
             }]
         }];
@@ -73,26 +78,47 @@
         });
 
         pbjs.que.push(function() {
-            pbjs.addAdUnits(adUnits);
-            pbjs.requestBids({
-                bidsBackHandler: sendAdserverRequest,
-                timeout: PREBID_TIMEOUT
-            });
+          pbjs.setConfig({
+            /*
+              The `ortb2` config key takes a value of OpenRTB request JSON. 
+              This value will be merged over the top of the OpenRTB bid request
+              sent to Relay. This override will happen for every ad unit. To
+              override a single `imp` use `ortb2Imp` on the ad unit, as above.
+            */
+            ortb2: { 
+              user: {
+                ext: {
+                  a0x: {
+                    bidders: {
+                      index: {
+                        buyeruid: 'index-user-id'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          })
+          pbjs.addAdUnits(adUnits);
+          pbjs.requestBids({
+            bidsBackHandler: sendAdserverRequest,
+            timeout: PREBID_TIMEOUT
+          });
         });
 
         function sendAdserverRequest() {
-            if (pbjs.adserverRequestSent) return;
-            pbjs.adserverRequestSent = true;
-            googletag.cmd.push(function() {
-                pbjs.que.push(function() {
-                    pbjs.setTargetingForGPTAsync();
-                    googletag.pubads().refresh();
-                });
+          if (pbjs.adserverRequestSent) return;
+          pbjs.adserverRequestSent = true;
+          googletag.cmd.push(function() {
+            pbjs.que.push(function() {
+              pbjs.setTargetingForGPTAsync();
+              googletag.pubads().refresh();
             });
+          });
         }
 
         setTimeout(function() {
-            sendAdserverRequest();
+          sendAdserverRequest();
         }, FAILSAFE_TIMEOUT);
 
     </script>
