@@ -2,15 +2,16 @@ import * as utils from '../src/utils.js';
 import { config } from '../src/config.js';
 import { registerBidder } from '../src/adapters/bidderFactory.js';
 
-const BIDDER_ENDPOINT = '//localhost:8080/openrtb2'
-const SYNC_ENDPOINT = '//localhost:8080/u/set'
+const BIDDER_HOST     = 'localhost:8080'
+const BIDDER_ENDPOINT = `//${BIDDER_HOST}/openrtb2`
+//const SYNC_ENDPOINT = `//${BIDDER_HOST}/u/set`
 
 ////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////// Request
 ////////////////////////////////////////////////////////////
 
 /**
- * 
+ * OpenRTB Source object.
  * @param {*} validBidRequest 
  * @returns 
  */
@@ -30,7 +31,7 @@ const makeSource = (validBidRequest) => {
 }
 
 /**
- * 
+ * OpenRTB Imp object.
  * @param {*} validBidRequest 
  * @returns 
  */
@@ -65,7 +66,7 @@ const makeImp = (validBidRequest) => {
 }
 
 /**
- * 
+ * An heuristic for device detection in the browser.
  * @param {*} navigatorPlatformStr 
  * @returns 
  */
@@ -95,7 +96,7 @@ const deviceHeuristic = (navigatorPlatformStr) => {
 }
 
 /**
- * 
+ * OpenRTB Device object.
  * @returns 
  */
 const makeDevice = () => {
@@ -114,7 +115,7 @@ const makeDevice = () => {
 }
 
 /**
- * 
+ * OpenRTB Site object.
  * @returns 
  */
 const makeSite = () => {
@@ -128,7 +129,7 @@ const makeSite = () => {
 }
 
 /**
- * 
+ * OpenRTB User object.
  * @param {*} validBidRequest 
  * @param {*} bidderRequest 
  * @returns 
@@ -151,7 +152,7 @@ const makeUser = (validBidRequest, bidderRequest) => {
 }
 
 /**
- * 
+ * OpenRTB Regs object.
  * @param {*} bidderRequest 
  * @returns 
  */
@@ -169,7 +170,7 @@ const makeRegs = (bidderRequest) => {
 }
 
 /**
- * 
+ * OpenRTB top level ext.
  * @returns 
  */
 const makeExt = () => {
@@ -179,7 +180,7 @@ const makeExt = () => {
 }
 
 /**
- * 
+ * OpenRTB top level badv.
  * @returns 
  */
 const makeBadv = () => {
@@ -187,7 +188,9 @@ const makeBadv = () => {
 }
 
 /**
+ * Adpater implementation: request.
  * 
+ * The Relay service accepts OpenRTB requests in the POST body.
  * @param {*} validBidRequest 
  * @param {*} bidderRequest 
  * @returns 
@@ -221,18 +224,9 @@ const makeRelayRequest = (validBidRequest, bidderRequest) => {
 ////////////////////////////////////////////////////////////
 
 /**
+ * Adapter implementation: response 
  * 
- * @param {*} obj 
- * @param {*} key 
- * @param {*} defaultValue 
- * @returns 
- */
-const withDefault = (obj, key, defaultValue) => {
-  return (obj || {})[key] || defaultValue;
-}
-
-/**
- * 
+ * The Relay service returns OpenRTB bid responses.
  * @param {*} bid 
  * @returns 
  */
@@ -243,11 +237,11 @@ const newBidResponse = (bid) => {
     // <required>
     requestId: bid.impid,
     cpm: bid.price,
-    currency: withDefault(bid, 'currency', "USD"),
-    width: withDefault(bid, 'w', 300),
-    height: withDefault(bid, 'h', 250),
+    currency: bid.currency,
+    width: bid.w,
+    height: bid.h,
     ad: bid.adm,
-    ttl: withDefault(bid, 'ttl', 360),
+    ttl: bid.ttl || 360,
     creativeId: bid.crid,
     netRevenue: true,
     // </required>
@@ -277,7 +271,7 @@ const newBidResponse = (bid) => {
 ////////////////////////////////////////////////////////////
 
 /**
- * 
+ * Adapter spec.
  * @param {*} bid 
  * @returns 
  */
@@ -292,7 +286,7 @@ const isBidRequestValid = (bid) => {
 };
 
 /**
- * 
+ * Adapter spec.
  * @param {*} validBidRequests 
  * @param {*} bidderRequest 
  * @returns 
@@ -313,7 +307,7 @@ const buildRequests = (validBidRequests, bidderRequest) => {
 };
 
 /**
- * 
+ * Adapter spec.
  * @param {*} serverResponse 
  * @param {*} request 
  * @returns 
@@ -339,7 +333,7 @@ const interpretResponse = (serverResponse, request) => {
 };
 
 /**
- * 
+ * Adapter spec.
  * @param {*} syncOptions 
  * @param {*} serverResponses 
  * @param {*} gdprConsent 
@@ -354,7 +348,7 @@ const getUserSyncs = (syncOptions, serverResponses, gdprConsent, uspConsent) => 
 }
 
 /**
- * 
+ * Adapter spec.
  * @param {*} timeoutData 
  */
 const onTimeout = (timeoutData) => {
@@ -362,7 +356,7 @@ const onTimeout = (timeoutData) => {
 };
 
 /**
- * 
+ * Adapter spec.
  * @param {*} bid 
  */
 const onBidWon = (bid) => {
@@ -370,7 +364,7 @@ const onBidWon = (bid) => {
 };
 
 /**
- * 
+ * Adapter spec.
  * @param {*} bid 
  */
 const onSetTargeting = (bid) => {
