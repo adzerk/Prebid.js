@@ -2,9 +2,12 @@ import * as utils from '../src/utils.js';
 import { config } from '../src/config.js';
 import { registerBidder } from '../src/adapters/bidderFactory.js';
 
-const BIDDER_HOST     = 'localhost:8080'
-const BIDDER_ENDPOINT = `//${BIDDER_HOST}/openrtb2`
-//const SYNC_ENDPOINT = `//${BIDDER_HOST}/u/set`
+const BIDDER_HOST     = 'e.relay.bid'
+const BIDDER_ENDPOINT = `https://${BIDDER_HOST}/p/openrtb2`
+// Not currently needed b/c the bid responses are returning sync pixels
+// directly.
+// const SYNC_ENDPOINT = `https://${BIDDER_HOST}/u/set`
+
 
 ////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////// Request
@@ -237,9 +240,9 @@ const newBidResponse = (bid) => {
     // <required>
     requestId: bid.impid,
     cpm: bid.price,
-    currency: bid.currency,
-    width: bid.w,
-    height: bid.h,
+    currency: bid.currency || "USD",
+    width: bid.w || 350,
+    height: bid.h || 200,
     ad: bid.adm,
     ttl: bid.ttl || 360,
     creativeId: bid.crid,
@@ -292,14 +295,18 @@ const isBidRequestValid = (bid) => {
  * @returns 
  */
 const buildRequests = (validBidRequests, bidderRequest) => {
-  utils.logMessage({trace: 'buildRequests', validBidRequests, bidderRequest});
+  const accountId = config.getConfig('relayAccountId')
+  if (!accountId) {
+    utils.logWarn({trace: 'buildRequests', message: 'Failed to build request: your accountId is not set. Please set pbjs.setConfig({accountId: ACCOUNT_ID, ...}).'})
+  }
+  utils.logMessage({trace: 'buildRequests', validBidRequests, bidderRequest, accountId});
   return validBidRequests.map(
     (validBidRequest) => {
       utils.logMessage({trace: 'buildRequests::map'});
       let reqData = makeRelayRequest(validBidRequest, bidderRequest)
       return {
         method: 'POST',
-        url: BIDDER_ENDPOINT,
+        url: `${BIDDER_ENDPOINT}?a=${accountId}`,
         data: reqData,
       }
     }
@@ -314,6 +321,9 @@ const buildRequests = (validBidRequests, bidderRequest) => {
  */
 const interpretResponse = (serverResponse, request) => {
   utils.logMessage({trace: 'interpretResponse', serverResponse, request});
+  if (!serverResponse) {
+    return [];
+  }
 
   const seatBids = ((serverResponse||{}).body||{}).seatbid || [];
   utils.logMessage({seatBids});
@@ -341,10 +351,25 @@ const interpretResponse = (serverResponse, request) => {
  * @returns 
  */
 const getUserSyncs = (syncOptions, serverResponses, gdprConsent, uspConsent) => {
-  utils.logMessage({trace: 'getUserSyncs', status: "Not implemented.", serverResponses, gdprConsent, uspConsent});
+  utils.logMessage({trace: 'getUserSyncs', serverResponses});
+
+  // Formulate gdpr params.
+  // const safeGdprConsent = gdprConsent||{}
+  // let gdpr_params;
+  // if (typeof safeGdprConsent.gdprApplies === 'boolean') {
+  //   gdpr_params = `gdpr=${Number(safeGdprConsent.gdprApplies)}&gdpr_consent=${safeGdprConsent.consentString}`;
+  // } else {
+  //   gdpr_params = `gdpr_consent=${safeGdprConsent.consentString}`;
+  // }
+
+  // If we have dynamic URLs from the server use them.
+  const syncs = ((((serverResponses[0]||{}).body||{}).ext||{}).user_syncs||[])
+  if (syncOptions.pixelEnabled && syncs) {
+    utils.logMessage({trace: 'getUserSyncs::syncsFound', syncs});
+    return syncs;
+  }
 
   return [];
-
 }
 
 /**

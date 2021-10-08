@@ -79,6 +79,20 @@
 
         pbjs.que.push(function() {
           pbjs.setConfig({
+            // The Relay accountId. This identifies you at the
+            // customer/integration level and is static.
+            relayAccountId: 12021,
+
+            // Enable iframe syncing. This is disabled by default.
+            userSync: {
+              filterSettings: {
+                iframe: {
+                  bidders: ['relay'],
+                  filter: 'include'
+                }
+              }
+            },
+
             /*
               The `ortb2` config key takes a value of OpenRTB request JSON. 
               This value will be merged over the top of the OpenRTB bid request
@@ -90,7 +104,7 @@
                 ext: {
                   a0x: {
                     bidders: {
-                      index: {
+                      examplebidder: {
                         buyeruid: 'index-user-id'
                       }
                     }

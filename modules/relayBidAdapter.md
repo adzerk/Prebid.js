@@ -8,9 +8,9 @@ Maintainer: jgrimes@kevel.com, jswart@kevel.com
 
 ## Description
 
-The Relay Adapter provides an interface to the Relay Service. The Relay Adapter sends one request to the Relay Service per ad unit, but the Relay Service will then send one request to each configured exchange. This is functionally similar to Prebid Server. One client side request, bid from many exchanges.
+The Relay Adapter provides an interface to the Relay Service. The Relay Adapter sends one request to the Relay Service per ad unit, but the Relay Service will then send one request to each configured exchange. This is functionally similar to Prebid Server. One client side request, bids from many exchanges.
 
-The Relay service accepts industry standard OpenRTB 2.5 as its payload. The Relay Adapter converts Prebid.js parameters into an OpenRTB 2.5 request.  We use `ext` data in order to facilitate the "Prebid Service like" behavior.
+The Relay service accepts industry standard OpenRTB 2.5 as its payload. The Relay Adapter converts Prebid.js parameters into an OpenRTB 2.5 request.  We use `ext` data in order to facilitate the "Prebid Server like" behavior.
 
 # Bid Params
 
@@ -107,6 +107,20 @@ Due to the extremely flexible nature of the Relay Bidder it is easiest to see an
 
         pbjs.que.push(function() {
           pbjs.setConfig({
+            // The Relay accountId. This identifies you at the
+            // customer/integration level and is static.
+            relayAccountId: 12021,
+
+            // Enable iframe syncing. This is disabled by default.
+            userSync: {
+              filterSettings: {
+                iframe: {
+                  bidders: ['relay'],
+                  filter: 'include'
+                }
+              }
+            },
+
             /*
               The `ortb2` config key takes a value of OpenRTB request JSON. 
               This value will be merged over the top of the OpenRTB bid request
@@ -118,7 +132,7 @@ Due to the extremely flexible nature of the Relay Bidder it is easiest to see an
                 ext: {
                   a0x: {
                     bidders: {
-                      index: {
+                      examplebidder: {
                         buyeruid: 'index-user-id'
                       }
                     }
