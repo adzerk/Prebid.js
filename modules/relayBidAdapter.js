@@ -24,11 +24,7 @@ const makeSource = (validBidRequest) => {
     fd: 1,
     tid: transactionId,
     ext: {
-      schain: {
-        ver: '1.0',
-        complete: 1,
-        nodes: (schain || [])
-      }
+      schain: schain
     }
   }
 }
